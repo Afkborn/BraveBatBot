@@ -321,6 +321,7 @@ class Brave:
             with open(fileLoc, "r",encoding="utf-8") as file:
                 data = file.read()
                 amounts = re.findall(r'class="amount">.,...', data)
+                print(amounts)
                 for index, amount in enumerate(amounts):
                     amount = amount.replace("class=\"amount\">","")
                     amount = amount.replace(".","").replace(",",".").replace("</","")
@@ -333,10 +334,12 @@ class Brave:
                     self.earn_verified_bat = amounts[1]
                     self.earn_unverified_bat = amounts[2]
                     self.giving_bat = amounts[3]
-                elif (len(amounts) == 3):
+                elif (len(amounts) == 4):
                     # bat odeme pasif
-                    self.earn_unverified_bat = amounts[1]
-                    self.giving_bat = amounts[2]
+                    #['class="amount">7,396', 'class="amount">1,061', 'class="amount">1,408', 'class="amount">0,0</']
+                    self.earn_verified_bat = amounts[1]
+                    self.earn_unverified_bat = amounts[2]
+                    self.giving_bat = amounts[3]
             remove(fileLoc)
             logging.info(f"Total Bat: {self.total_bat}, Earn Verified Bat: {self.earn_verified_bat}, Earn Unverified Bat: {self.earn_unverified_bat}, Giving Bat: {self.giving_bat}")
             #time 
