@@ -13,7 +13,8 @@ import subprocess
 import win32gui
 import pyautogui
 import re
-
+from bs4 import BeautifulSoup
+            
 
 FOLDER_NAME= ["Log","Screenshot"]
 
@@ -317,35 +318,32 @@ class Brave:
             logging.fatal("program is terminated")
             exit()
         else:
+            HTMLFile = open(fileLoc, "r", encoding="utf-8")
+            
+            index = HTMLFile.read()
 
-            with open(fileLoc, "r",encoding="utf-8") as file:
-                data = file.read()
-                amounts = re.findall(r'class="amount">.,...', data)
-                print(amounts)
-                for index, amount in enumerate(amounts):
-                    amount = amount.replace("class=\"amount\">","")
-                    amount = amount.replace(".","").replace(",",".").replace("</","")
-                    amount = float(amount)
-                    amounts[index] = amount
-                logging.info(f"{fileLoc} is read")
-                self.total_bat = amounts[0]
-                if (day_int < 8 and len(amounts) == 4):
-                    # bat odeme aktif
-                    self.earn_verified_bat = amounts[1]
-                    self.earn_unverified_bat = amounts[2]
-                    self.giving_bat = amounts[3]
-                elif (len(amounts) == 4):
-                    # bat odeme pasif
-                    #['class="amount">7,396', 'class="amount">1,061', 'class="amount">1,408', 'class="amount">0,0</']
-                    self.earn_verified_bat = amounts[1]
-                    self.earn_unverified_bat = amounts[2]
-                    self.giving_bat = amounts[3]
+            S = BeautifulSoup(index, 'html.parser')
+
+            balanceAmount = S.find_all('div', {'class': re.compile("^balanceAmount--..............$")})[0]
+            progressItemAmount_list = S.find_all('div', {'class': re.compile("^progressItemAmount--..............$")})
+            progressItemAmount_earn = progressItemAmount_list[0]
+            progressItemAmount_spend = progressItemAmount_list[1]
+            balanceExchangeAmount = S.find_all('div', {'class': re.compile("^balanceExchangeAmount--.............$")})[0]
+
+            self.total_bat = float(balanceAmount.find('span', {'class': 'amount'}).text.replace(",","."))
+            self.earn_unverified_bat = float(progressItemAmount_earn.find('span', {'class': 'amount'}).text.replace(",","."))
+            self.giving_bat = float(progressItemAmount_spend.find('span', {'class': 'amount'}).text.replace(",","."))
+            self.total_bat_usd = float(balanceExchangeAmount.find('span', {'class': 'amount'}).text.replace(",","."))
+
+            HTMLFile.close()
+
             remove(fileLoc)
-            logging.info(f"Total Bat: {self.total_bat}, Earn Verified Bat: {self.earn_verified_bat}, Earn Unverified Bat: {self.earn_unverified_bat}, Giving Bat: {self.giving_bat}")
+            logging.info(f"Total Bat: {self.total_bat}, Total Bat USD: {self.total_bat_usd}, Earn Verified Bat: {self.earn_verified_bat}, Earn Unverified Bat: {self.earn_unverified_bat}, Giving Bat: {self.giving_bat}")
             #time 
-            print(f"Total Bat: {self.total_bat}, Earn Verified Bat: {self.earn_verified_bat}, Earn Unverified Bat: {self.earn_unverified_bat}, Giving Bat: {self.giving_bat}")
-            return (self.total_bat,self.earn_verified_bat,self.earn_unverified_bat,self.giving_bat)
-        
+            print(f"Total Bat: {self.total_bat}, Total Bat USD: {self.total_bat_usd}, Earn Verified Bat: {self.earn_verified_bat}, Earn Unverified Bat: {self.earn_unverified_bat}, Giving Bat: {self.giving_bat}")
+            return (self.total_bat,self.earn_verified_bat,self.earn_unverified_bat,self.giving_bat,self.total_bat_usd)
+
+
 
     def refresh_page(self,count, interval= 1000):
         for _ in range(count):
@@ -412,7 +410,7 @@ Enter your choice: """
     def get_bat(self):
         logging.info("getting bat")
         self.operation_time = time()
-        _, _, old_earn_unverified_bat, _ = self.get_bat_with_source() # get bat count with source code (recommend)
+        _, _, old_earn_unverified_bat, _ , _ = self.get_bat_with_source() # get bat count with source code (recommend)
 
         self.refresh_page(self.refresh_count,self.refresh_cool_down)
 
